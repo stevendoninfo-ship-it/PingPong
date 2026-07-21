@@ -1,0 +1,66 @@
+name: Build APK
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4.2.2
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5.4.0
+      with:
+        python-version: '3.10'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libsqlite3-dev sqlite3 bzip2 libbz2-dev zlib1g-dev libssl-dev openssl libgdbm-dev libgdbm-compat-dev libffi-dev libreadline-dev libncurses5-dev libncursesw5-dev ccache zip unzip openjdk-17-jdk git autoconf automake libtool pkg-config cython
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install buildozer cython
+
+    - name: Create buildozer.spec
+      run: |
+        cat > buildozer.spec << 'EOF'
+        [app]
+        title = Ping Pong
+        package.name = pingpong
+        package.domain = org.pingpong
+        source.dir = .
+        source.include_exts = py,png,jpg,kv,atlas
+        version = 1.0
+        requirements = python3,pygame,pyjnius
+        orientation = portrait
+        fullscreen = 1
+        android.permissions = INTERNET
+        android.api = 31
+        android.minapi = 21
+        android.ndk = 25b
+        android.accept_sdk_license = True
+        
+        [buildozer]
+        log_level = 2
+        warn_on_root = 1
+        EOF
+
+    - name: Build APK with Buildozer
+      run: buildozer android debug
+      timeout-minutes: 180
+
+    - name: Upload APK
+      if: success()
+      uses: actions/upload-artifact@v4.6.1
+      with:
+        name: PingPong-APK
+        path: bin/*.apk
+        retention-days: 30
