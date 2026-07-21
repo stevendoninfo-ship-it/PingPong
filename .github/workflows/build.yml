@@ -1,0 +1,33 @@
+name: Build APK
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Create buildozer.spec
+      run: |
+        pip install buildozer
+        buildozer init
+        sed -i 's/requirements = python3,kivy/requirements = python3,pygame/g' buildozer.spec
+
+    - name: Build with Buildozer
+      uses: ArtemSvyat/buildozer-action@v1
+      with:
+        command: buildozer -v android debug
+        buildozer_version: master
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: PingPong-APK
+        path: bin/*.apk
+        
